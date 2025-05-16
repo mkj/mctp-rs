@@ -370,9 +370,9 @@ pub struct Router<'r> {
 
     /// Listeners for different message types.
     // Has a separate non-async Mutex so it can be used by RouterAsyncListener::drop()
-    // TODO filter by more than just MsgType, maybe have a Map of some sort?
+    // TODO filter by more than just MsgType
     app_listeners:
-        BlockingMutex<RefCell<[Option<(MsgType, AppCookie)>; MAX_LISTENERS]>>,
+        BlockingMutex<RefCell<Vec<(MsgType, AppCookie), MAX_LISTENERS>>>,
 
     recv_wakers: WakerPool,
 }
@@ -400,8 +400,7 @@ impl<'r> Router<'r> {
     ) -> Self {
         let inner = RouterInner { stack, lookup };
 
-        let app_listeners =
-            BlockingMutex::new(RefCell::new([const { None }; MAX_LISTENERS]));
+        let app_listeners = BlockingMutex::new(RefCell::new(Vec::new()));
 
         Self {
             inner: AsyncMutex::new(inner),
@@ -510,10 +509,7 @@ impl<'r> Router<'r> {
         // Find the matching listener
         self.app_listeners.lock(|a| {
             let mut a = a.borrow_mut();
-            for e in a.iter_mut() {
-                let Some((t, cookie)) = e else {
-                    continue;
-                };
+            for (t, cookie) in a.iter_mut() {
                 if *t == typ {
                     // OK unwrap: only set once
                     let handle = handle.take().unwrap();
@@ -552,17 +548,16 @@ impl<'r> Router<'r> {
             let mut a = a.borrow_mut();
 
             // Check for existing binds with the same type
-            for bind in a.iter() {
-                if bind.as_ref().is_some_and(|(t, _)| *t == typ) {
-                    return Err(Error::AddrInUse);
-                }
+            if a.iter().any(|(t, _cookie)| *t == typ) {
+                return Err(Error::AddrInUse);
             }
 
             // Find a free slot
-            let slot =
-                a.iter_mut().find(|e| e.is_none()).ok_or(Error::NoSpace)?;
+            if a.is_full() {
+                return Err(Error::NoSpace);
+            }
             let cookie = self.recv_wakers.alloc()?;
-            *slot = Some((typ, cookie));
+            let _ = a.push((typ, cookie));
             Ok(cookie)
         })
     }
@@ -570,14 +565,14 @@ impl<'r> Router<'r> {
     fn app_unbind(&self, cookie: AppCookie) -> Result<()> {
         self.app_listeners.lock(|a| {
             let mut a = a.borrow_mut();
-            let bind = a.get_mut(cookie.0).ok_or(Error::BadArgument)?;
 
-            if bind.is_none() {
+            let orig = a.len();
+            a.retain(|(_t, c)| *c != cookie);
+            if orig == a.len() {
+                // none removed
                 return Err(Error::BadArgument);
             }
 
-            // Clear the bind.
-            *bind = None;
             // No need to wake any waker, unbind only occurs
             // on RouterAsyncListener::drop.
             self.recv_wakers.remove(cookie);
