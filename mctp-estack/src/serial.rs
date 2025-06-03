@@ -8,9 +8,7 @@
 #[allow(unused)]
 use crate::fmt::{debug, error, info, trace, warn};
 
-use crate::{
-    AppCookie, MctpMessage, ReceiveHandle, SendOutput, Stack, MAX_PAYLOAD,
-};
+use crate::{AppCookie, MctpMessage, SendOutput, Stack, MAX_PAYLOAD};
 use mctp::{Eid, Error, MsgType, Result, Tag};
 
 use crc::Crc;
@@ -83,7 +81,7 @@ impl MctpSerialHandler {
         &mut self,
         input: &mut impl Read,
         mctp: &'f mut Stack,
-    ) -> Result<Option<(MctpMessage<'f>, ReceiveHandle)>> {
+    ) -> Result<Option<MctpMessage<'f>>> {
         let packet = self.read_frame_async(input).await?;
         mctp.receive(packet)
     }
