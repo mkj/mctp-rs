@@ -3,20 +3,22 @@
  * Copyright (c) 2024-2025 Code Construct
  */
 
-//! MCTP Stack
+//! # MCTP Stack
 //!
 //! This crate provides a MCTP stack that can be embedded in other programs
-//! or devices. A [`Stack`] handles MCTP message formatting and parsing, independent
-//! of any particular MCTP transport binding.
+//! or devices.
 //!
 //! A [`Router`] object lets programs use a [`Stack`] with
-//! MCTP transport binding links. Each "port" handles transmitting and receiving
+//! MCTP transport binding links. Each *Port* handles transmitting and receiving
 //! packets independently. Messages destined for the stack's own EID will
 //! be passed to applications.
 //!
 //! Applications can create [`router::RouterAsyncListener`] and [`router::RouterAsyncReqChannel`]
 //! instances to communicate over MCTP. Those implement the standard [`mctp` crate](mctp)
 //! async traits.
+//!
+//! The IO-less [`Stack`] handles MCTP message formatting and parsing, independent
+//! of any particular MCTP transport binding.
 //!
 //! ## Configuration
 //!
@@ -29,6 +31,8 @@
 #![allow(clippy::too_many_arguments)]
 
 /// Re-exported so that callers can use the same `heapless` version.
+///
+/// `heapless::Vec` is currently an argument of `send_fill()` in transports.
 ///
 /// TODO: will be replaced with something else, maybe `heapless::VecView` once
 /// released.
@@ -60,11 +64,9 @@ pub(crate) use config::*;
 /// In milliseconds.
 const REASSEMBLY_EXPIRY_TIMEOUT: u32 = 6000;
 
-/// Timeout for [`get_deferred()`](Stack::get_deferred).
+/// Timeout for calling [`get_deferred()`](Stack::get_deferred).
 ///
-/// Reassembled messages will remain available for this length of time
-/// unless `finished_receive` etc is called.
-/// In milliseconds.
+/// See documentation for [`MctpMessage`].
 pub const DEFERRED_TIMEOUT: u32 = 6000;
 
 /// Timeout granularity.
@@ -130,6 +132,9 @@ pub struct AppCookie(pub usize);
 
 type Header = libmctp::base_packet::MCTPTransportHeader<[u8; HEADER_LEN]>;
 
+/// Low level MCTP stack.
+///
+/// This is an IO-less MCTP stack, independent of any particular transport.
 #[derive(Debug)]
 pub struct Stack {
     own_eid: Eid,
@@ -335,11 +340,8 @@ impl Stack {
 
     /// Receive a packet.
     ///
-    /// Returns `Ok(Some(_))` when a full message is reassembled.
+    /// Returns `Ok(Some(MctpMessage))` when a full message is reassembled.
     /// Returns `Ok(None)` on success when the message is incomplete.
-    /// Callers must call [`finished_receive`](Stack::finished_receive)
-    /// or [`fetch_message_with`](Stack::fetch_message_with)
-    /// for any returned [`ReceiveHandle`].
     pub fn receive(&mut self, packet: &[u8]) -> Result<Option<MctpMessage>> {
         // Get or insert a reassembler for this packet
         let idx = self.get_reassembler(packet)?;
@@ -384,7 +386,9 @@ impl Stack {
         }
     }
 
-    /// Retrieves a message deferred from a previous [`receive`](Self::receive) callback.
+    /// Retrieves a message previously retained.
+    ///
+    /// This will return messages from a previous [`MctpMessage::retain()`].
     ///
     /// Messages are selected by `(source_eid, tag)`.
     /// If multiple match the earliest is returned.
@@ -409,7 +413,11 @@ impl Stack {
             })
     }
 
-    /// Retrieves a message deferred from a previous [`receive`](Self::receive) callback.
+    /// Retrieves a message previously retained, matching by cookie.
+    ///
+    /// This will return messages from a previous [`MctpMessage::retain()`].
+    /// The cookie can either have been set by [`MctpMessage::set_cookie()`],
+    /// or will be set on a matching response from a [`Stack::start_send()`].
     ///
     /// If multiple match the earliest is returned.
     /// Multiple cookies to match may be provided.
@@ -604,7 +612,17 @@ impl Stack {
     }
 }
 
-// For received reassembled messages
+/// A received MCTP message.
+///
+/// This is a complete message received by the MCTP stack.
+/// By default when it is dropped the MCTP stack will discard the internal message buffer.
+///
+/// If the the message is going to be retrieved again using
+/// [`get_deferred()`](Stack::get_deferred) or
+/// [`get_deferred_bycookie()`](Stack::get_deferred_bycookie), the caller must
+/// call [`retain()`](Self::retain). In that case the MCTP stack will keep the message
+/// buffer available until [`DEFERRED_TIMEOUT`] (measured from when the final packet
+/// of the message was received).
 pub struct MctpMessage<'a> {
     pub source: Eid,
     pub dest: Eid,
@@ -624,14 +642,27 @@ pub struct MctpMessage<'a> {
 }
 
 impl<'a> MctpMessage<'a> {
+    /// Retrieve the message's cookie.
+    ///
+    /// For response messages with `tag.is_owner() == false` this will be
+    /// set to the `cookie` argument of [`start_send()`](Stack::start_send).
     pub fn cookie(&self) -> Option<AppCookie> {
         self.reassembler.cookie
     }
 
+    /// Retrieve the message's cookie.
+    ///
+    /// This can be used to set a cookie to be used later with
+    /// [`get_deferred_bycookie()`](Stack::get_deferred_bycookie).
     pub fn set_cookie(&mut self, cookie: Option<AppCookie>) {
         self.reassembler.set_cookie(cookie)
     }
 
+    /// Retain the message in the MCTP stack.
+    ///
+    /// This must be called for every instance of a `MctpMessage` if
+    /// it is going to be fetch with `get_deferred{_bycookie}()` - otherwise the
+    /// message will be released by the MCTP stack.
     pub fn retain(&mut self) {
         self.retain = true;
     }
