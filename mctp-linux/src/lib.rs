@@ -39,8 +39,8 @@
 //! single-endpoint communication; general MCTP requesters may want a different
 //! socket model.
 
+use async_io::Async;
 use core::mem;
-use smol::Async;
 use std::fmt;
 use std::io::Error;
 use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, OwnedFd, RawFd};

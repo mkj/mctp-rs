@@ -823,9 +823,9 @@ dependencies = [
 name = "mctp-linux"
 version = "0.2.0"
 dependencies = [
+ "async-io",
  "libc",
  "mctp",
- "smol",
 ]
 
 [[package]]
