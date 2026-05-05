@@ -125,6 +125,8 @@ pub struct WakeOnDrop<T> {
 }
 
 impl<T> WakeOnDrop<T> {
+    // Currently only used by async feature
+    #[cfg_attr(not(feature = "async"), expect(dead_code))]
     pub fn new(value: T, waker: &Waker) -> Self {
         Self {
             value,
