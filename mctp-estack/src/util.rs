@@ -1,3 +1,6 @@
+use core::ops::{Deref, DerefMut};
+use core::task::Waker;
+
 /// Takes a `usize` from a build-time environment variable.
 ///
 /// If unset, the default is used. Can be used in a const context.
@@ -113,6 +116,42 @@ impl VectorReader {
 
 #[derive(Debug)]
 pub struct VectorReaderError;
+
+// TODO: Use DropGuard instead once it's stable.
+// That can wake _after_ T::drop()
+pub struct WakeOnDrop<T> {
+    waker: Waker,
+    value: T,
+}
+
+impl<T> WakeOnDrop<T> {
+    pub fn new(value: T, waker: &Waker) -> Self {
+        Self {
+            value,
+            waker: waker.clone(),
+        }
+    }
+}
+
+impl<T> Drop for WakeOnDrop<T> {
+    fn drop(&mut self) {
+        self.waker.wake_by_ref();
+    }
+}
+
+impl<T> Deref for WakeOnDrop<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.value
+    }
+}
+
+impl<T> DerefMut for WakeOnDrop<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.value
+    }
+}
 
 #[cfg(test)]
 mod tests {

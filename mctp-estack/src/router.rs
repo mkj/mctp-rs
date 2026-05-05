@@ -7,6 +7,7 @@
 
 #[allow(unused)]
 use crate::fmt::{debug, error, info, trace, warn};
+use crate::util::WakeOnDrop;
 
 use core::cell::RefCell;
 use core::debug_assert;
