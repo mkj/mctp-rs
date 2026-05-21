@@ -70,7 +70,8 @@ impl<S: Read + Write> Inner<S> {
         }
 
         loop {
-            let mut tx_pkt = [0u8; mctp_estack::serial::MTU_MAX];
+            // Add for the four byte transport header
+            let mut tx_pkt = [0u8; mctp_estack::serial::MTU_MAX + 4];
             let r = fragmenter.fragment(&tx_msg, &mut tx_pkt);
             match r {
                 SendOutput::Packet(p) => {

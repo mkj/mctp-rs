@@ -94,7 +94,7 @@ impl Fragmenter {
     /// (If you do, the vector has to hold exactly one buffer that is
     /// equal to the one passed to `fragment()`.)
     ///
-    /// `out` must be at least as large as the specified `mtu`.
+    /// `out` must be at least as large as the specified `mtu` plus the MCTP transport header (four bytes).
     pub fn fragment<'f>(
         &mut self,
         payload: &[u8],
@@ -113,7 +113,7 @@ impl Fragmenter {
     /// (If you do, the vector has to hold exactly one buffer that is
     /// equal to the one passed to `fragment()`.)
     ///
-    /// `out` must be at least as large as the specified `mtu`.
+    /// `out` must be at least as large as the specified `mtu` plus the MCTP transport header (four bytes).
     pub fn fragment_vectored<'f>(
         &mut self,
         payload: &[&[u8]],
@@ -129,17 +129,19 @@ impl Fragmenter {
             return SendOutput::failure(Error::BadArgument, self);
         }
 
-        // Require at least MTU buffer size, to ensure that all non-end
+        let fragment_length = self.mtu + MctpHeader::LEN;
+
+        // Require at least fragment_length buffer size, to ensure that all non-end
         // fragments are the same size per the spec.
-        if out.len() < self.mtu {
+        if out.len() < fragment_length {
             debug!("small out buffer");
             return SendOutput::failure(Error::BadArgument, self);
         }
 
         // Reserve header space, the remaining buffer keeps being
         // updated in `rest`
-        let max_total = out.len().min(self.mtu);
-        let (h, mut rest) = out[..max_total].split_at_mut(MctpHeader::LEN);
+        let (h, mut rest) =
+            out[..fragment_length].split_at_mut(MctpHeader::LEN);
 
         // Append type byte
         if self.header.som {
@@ -162,7 +164,7 @@ impl Fragmenter {
         self.header.som = false;
         self.header.seq = (self.header.seq + 1) & mctp::MCTP_SEQ_MASK;
 
-        let used = max_total - rest.len();
+        let used = fragment_length - rest.len();
         SendOutput::Packet(&mut out[..used])
     }
 }
@@ -213,5 +215,33 @@ impl SendOutput<'_> {
     /// Just an error, no fragmenter required
     pub(crate) fn bare_failure(err: Error) -> Self {
         Self::Error { err, cookie: None }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_minimum_mtu() {
+        let mut fragmenter = Fragmenter::new(
+            mctp::MCTP_TYPE_CONTROL,
+            Eid(8),
+            Eid(9),
+            Tag::Owned(mctp::TagValue(0)),
+            mctp::MCTP_MIN_MTU,
+            None,
+            MsgIC(false),
+            0,
+        )
+        .unwrap();
+
+        let dummy_in = vec![1u8; mctp::MCTP_MIN_MTU * 2];
+        let mut dummy_out = vec![0u8; mctp::MCTP_MIN_MTU * 2];
+        let fragment = fragmenter.fragment(&dummy_in, &mut dummy_out);
+        let expected_length = mctp::MCTP_MIN_MTU + crate::MctpHeader::LEN;
+        assert!(
+            matches!(fragment, SendOutput::Packet(packet) if packet.len() == expected_length)
+        );
     }
 }
