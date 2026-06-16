@@ -272,14 +272,61 @@ impl<R: RespChannel> Responder<R> {
 
         match Cmd::from_u8(rsp.cmd) {
             Some(Cmd::RequestFirmwareData) => self.download_response(rsp, d),
+            Some(Cmd::TransferComplete) => {
+                if matches!(&self.state, State::Download { .. }) {
+                    self.set_state_with(|prev| {
+                        let State::Download {
+                            details, req_comm, ..
+                        } = prev
+                        else {
+                            unreachable!()
+                        };
+                        State::Verify {
+                            verify_result: None,
+                            request: FDReq::Ready,
+                            details,
+                            req_comm,
+                            req_pending: false,
+                        }
+                    });
+                } else {
+                    warn!(
+                        "TransferComplete response but not in Download state"
+                    );
+                }
+                Ok(())
+            }
 
-            // Ignore replies to these requests.
-            // We may have already moved on to a later state
-            // and don't have any useful retry for them.
-            Some(Cmd::TransferComplete)
-            | Some(Cmd::VerifyComplete)
-            | Some(Cmd::ApplyComplete) => Ok(()),
-
+            Some(Cmd::VerifyComplete) => {
+                if matches!(&self.state, State::Verify { .. }) {
+                    self.set_state_with(|prev| {
+                        let State::Verify {
+                            details, req_comm, ..
+                        } = prev
+                        else {
+                            unreachable!()
+                        };
+                        State::Apply {
+                            apply_result: None,
+                            request: FDReq::Ready,
+                            details,
+                            req_comm,
+                            req_pending: false,
+                        }
+                    });
+                } else {
+                    warn!("VerifyComplete response but not in Verify state");
+                }
+                Ok(())
+            }
+            Some(Cmd::ApplyComplete) => {
+                if matches!(&self.state, State::Apply { .. }) {
+                    self.set_state(State::ReadyXfer);
+                } else {
+                    warn!("ApplyComplete response but not in Apply state");
+                }
+                Ok(())
+            }
             _ => Err(proto_error!("Unsupported PLDM response")),
         }
     }
@@ -808,23 +855,7 @@ impl<R: RespChannel> Responder<R> {
 
         if let Some(tr) = transfer_result {
             // transfer complete sent
-            if *tr == TransferResult::Success {
-                self.set_state_with(|prev| {
-                    let State::Download {
-                        details, req_comm, ..
-                    } = prev
-                    else {
-                        unreachable!()
-                    };
-                    State::Verify {
-                        verify_result: None,
-                        request: FDReq::Ready,
-                        details,
-                        req_comm,
-                        req_pending: false,
-                    }
-                });
-            } else {
+            if *tr != TransferResult::Success {
                 // idle in Download state until the UA cancels
                 *request = FDReq::Failed((*tr).into())
             }
@@ -880,23 +911,7 @@ impl<R: RespChannel> Responder<R> {
         }
         *req_pending = true;
 
-        if *vr == VerifyResult::Success {
-            self.set_state_with(|prev| {
-                let State::Verify {
-                    details, req_comm, ..
-                } = prev
-                else {
-                    unreachable!()
-                };
-                State::Apply {
-                    apply_result: None,
-                    request: FDReq::Ready,
-                    details,
-                    req_comm,
-                    req_pending: false,
-                }
-            });
-        } else {
+        if *vr != VerifyResult::Success {
             // on verify failure remain in State::Verify, wait for cancel
             *request = FDReq::Failed(u8::from(*vr))
         }
@@ -951,9 +966,7 @@ impl<R: RespChannel> Responder<R> {
         }
         *req_pending = true;
 
-        if *ar == ApplyResult::Success {
-            self.set_state(State::ReadyXfer);
-        } else {
+        if *ar != ApplyResult::Success {
             // on failure remain in State::Apply, wait for cancel
             *request = FDReq::Failed(u8::from(*ar));
         }
