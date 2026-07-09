@@ -226,6 +226,37 @@ impl MctpSocket {
         }
     }
 
+    fn io_sendmsg(
+        &self,
+        bufs: &[&[u8]],
+        addr: &MctpSockAddr,
+    ) -> std::io::Result<usize> {
+        let mut iov: Vec<libc::iovec> = bufs
+            .iter()
+            .map(|b| libc::iovec {
+                iov_base: b.as_ptr() as *mut libc::c_void,
+                iov_len: b.len() as libc::size_t,
+            })
+            .collect();
+
+        let (addr_ptr, addr_len) = addr.as_raw();
+
+        let mut msg: libc::msghdr = unsafe { mem::zeroed() };
+        msg.msg_name = addr_ptr as *mut libc::c_void;
+        msg.msg_namelen = addr_len;
+        msg.msg_iov = iov.as_mut_ptr();
+        msg.msg_iovlen = iov.len() as _;
+
+        let fd = self.as_raw_fd();
+        let rc = unsafe { libc::sendmsg(fd, &msg, 0) };
+
+        if rc < 0 {
+            Err(Error::last_os_error())
+        } else {
+            Ok(rc as usize)
+        }
+    }
+
     /// Blocking send to a socket, given a buffer and address, returning
     /// the number of bytes sent.
     ///
@@ -382,6 +413,23 @@ impl MctpSocketAsync {
             .await
             .map_err(mctp::Error::Io)
     }
+
+    /// Send a message to a given address, from a set of buffers.
+    ///
+    /// The buffers are sent as a single MCTP message using a scatter-gather
+    /// `sendmsg()`, avoiding a copy to concatenate them.
+    ///
+    /// Returns the number of bytes sent.
+    pub async fn sendmsg(
+        &self,
+        bufs: &[&[u8]],
+        addr: &MctpSockAddr,
+    ) -> Result<usize> {
+        self.0
+            .write_with(|io| io.io_sendmsg(bufs, addr))
+            .await
+            .map_err(mctp::Error::Io)
+    }
 }
 
 /// Encapsulation of a remote endpoint: a socket and an Endpoint ID.
@@ -437,12 +485,7 @@ impl mctp::ReqChannel for MctpLinuxReq {
             typ_ic,
             mctp::MCTP_TAG_OWNER,
         );
-        // TODO: implement sendmsg() with iovecs
-        let concat = bufs
-            .iter()
-            .flat_map(|b| b.iter().cloned())
-            .collect::<Vec<u8>>();
-        self.sock.sendto(&concat, &addr)?;
+        self.sock.io_sendmsg(bufs, &addr).map_err(mctp::Error::Io)?;
         self.sent = true;
         Ok(())
     }
@@ -508,11 +551,7 @@ impl mctp::AsyncReqChannel for MctpLinuxAsyncReq {
             typ_ic,
             mctp::MCTP_TAG_OWNER,
         );
-        let concat = bufs
-            .iter()
-            .flat_map(|b| b.iter().cloned())
-            .collect::<Vec<u8>>();
-        self.sock.sendto(&concat, &addr).await?;
+        self.sock.sendmsg(bufs, &addr).await?;
         self.sent = true;
         Ok(())
     }
@@ -699,12 +738,10 @@ impl mctp::RespChannel for MctpLinuxResp<'_> {
         let tag = tag_to_smctp(&Tag::Unowned(self.tv));
         let addr =
             MctpSockAddr::new(self.eid.0, self.listener.net, typ_ic, tag);
-        // TODO: implement sendmsg() with iovecs
-        let concat = bufs
-            .iter()
-            .flat_map(|b| b.iter().cloned())
-            .collect::<Vec<u8>>();
-        self.listener.sock.sendto(&concat, &addr)?;
+        self.listener
+            .sock
+            .io_sendmsg(bufs, &addr)
+            .map_err(mctp::Error::Io)?;
         Ok(())
     }
 
@@ -736,11 +773,7 @@ impl mctp::AsyncRespChannel for MctpLinuxAsyncResp<'_> {
         let tag = tag_to_smctp(&Tag::Unowned(self.tv));
         let addr =
             MctpSockAddr::new(self.eid.0, self.listener.net, typ_ic, tag);
-        let concat = bufs
-            .iter()
-            .flat_map(|b| b.iter().cloned())
-            .collect::<Vec<u8>>();
-        self.listener.sock.sendto(&concat, &addr).await?;
+        self.listener.sock.sendmsg(bufs, &addr).await?;
         Ok(())
     }
 
