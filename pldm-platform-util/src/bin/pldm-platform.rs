@@ -169,7 +169,7 @@ fn enable_command_state_event_enable(event: &Option<String>) -> Result<bool> {
 }
 
 fn main() -> anyhow::Result<()> {
-    smol::block_on(async_main())
+    async_io::block_on(async_main())
 }
 
 async fn async_main() -> anyhow::Result<()> {

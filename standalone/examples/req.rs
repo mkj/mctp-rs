@@ -59,7 +59,7 @@ fn main() -> Result<()> {
         .write(true)
         .read(true)
         .open(args.serial)?;
-    let s = smol::Async::new(s)?;
+    let s = async_io::Async::new(s)?;
     let s = embedded_io_adapters::futures_03::FromFutures::new(s);
 
     let own_eid = Eid::new_normal(93).unwrap();

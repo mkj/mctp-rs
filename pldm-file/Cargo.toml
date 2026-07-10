@@ -23,7 +23,7 @@ anyhow = "1.0"
 chrono = { workspace = true, features = ["clock"] }
 mctp-linux = { workspace = true }
 pldm-platform = { workspace = true, features = ["alloc"] }
-smol = "2.0"
+async-io = { workspace = true }
 env_logger = "0.11.3"
 
 [features]

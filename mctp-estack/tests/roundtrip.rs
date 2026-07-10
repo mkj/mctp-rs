@@ -101,7 +101,7 @@ where
     F: Future<Output = R>,
 {
     let pktloop = router_loop(routera, routerb);
-    smol::block_on(async {
+    async_io::block_on(async {
         select! {
             res = test.fuse() => {
                 info!("Finished");

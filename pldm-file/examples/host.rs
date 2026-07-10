@@ -188,7 +188,7 @@ fn main() -> Result<()> {
 
     let mut buf = [0u8; 4096];
 
-    smol::block_on(async {
+    async_io::block_on(async {
         loop {
             let (typ, _ic, buf, chan) = listener.recv(&mut buf).await?;
 

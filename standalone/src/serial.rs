@@ -76,7 +76,7 @@ impl<S: Read + Write> Inner<S> {
             match r {
                 SendOutput::Packet(p) => {
                     let fut = self.mctpserial.send_async(p, &mut self.serial);
-                    smol::block_on(fut)?;
+                    async_io::block_on(fut)?;
                 }
                 SendOutput::Complete { tag, .. } => break Ok(tag),
                 SendOutput::Error { err, .. } => break Err(err),
@@ -114,7 +114,7 @@ impl<S: Read + Write> Inner<S> {
                 Err(mctp::Error::TimedOut)
             });
 
-            let pkt = smol::block_on(r)?;
+            let pkt = async_io::block_on(r)?;
 
             let r = self.mctp.receive(pkt)?;
 

@@ -26,6 +26,7 @@ embedded-io-adapters = { workspace = true }
 env_logger =  { workspace = true }
 futures = "0.3"
 proptest = { workspace = true }
+async-io = { workspace = true }
 smol = { workspace = true }
 
 

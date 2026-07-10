@@ -12,7 +12,7 @@ const EID: Eid = Eid(8);
 fn main() -> Result<()> {
     let mut req = MctpLinuxAsyncReq::new(EID, None)?;
 
-    smol::block_on(async {
+    async_io::block_on(async {
         let mcm_prop =
             df_properties(&mut req, DfProperty::MaxConcurrentMedium).await;
         let fds_prop =

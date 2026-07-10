@@ -14,7 +14,7 @@ log = { workspace = true }
 mctp = { workspace = true }
 mctp-linux = { workspace = true }
 pldm-platform = { workspace = true, features = ["std"] }
-smol = { workspace = true }
+async-io = { workspace = true }
 
 [features]
 deku-debug = ["deku/logging"]
