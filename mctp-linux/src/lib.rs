@@ -13,8 +13,8 @@
 //! operations, using MCTP-specific addressing structures.
 //!
 //! [`MctpSocket`] provides support for blocking socket operations
-//! [sendto](MctpSocket::sendto), [`recvfrom`](MctpSocket::recvfrom) and
-//! [`bind`](MctpSocket::bind).
+//! [`sendto`](MctpSocket::sendto), [`sendmsg`](MctpSocket::sendmsg),
+//! ([`recvfrom`](MctpSocket::recvfrom) and [`bind`](MctpSocket::bind).
 //!
 //! ```no_run
 //! use mctp_linux;
@@ -205,27 +205,6 @@ impl MctpSocket {
         Ok((len, addr))
     }
 
-    fn io_sendto(
-        &self,
-        buf: &[u8],
-        addr: &MctpSockAddr,
-    ) -> std::io::Result<usize> {
-        let (addr_ptr, addr_len) = addr.as_raw();
-        let buf_ptr = buf.as_ptr() as *const libc::c_void;
-        let buf_len = buf.len() as libc::size_t;
-        let fd = self.as_raw_fd();
-
-        let rc = unsafe {
-            libc::sendto(fd, buf_ptr, buf_len, 0, addr_ptr, addr_len)
-        };
-
-        if rc < 0 {
-            Err(Error::last_os_error())
-        } else {
-            Ok(rc as usize)
-        }
-    }
-
     fn io_sendmsg(
         &self,
         bufs: &[&[u8]],
@@ -262,7 +241,19 @@ impl MctpSocket {
     ///
     /// Essentially a wrapper around [libc::sendto].
     pub fn sendto(&self, buf: &[u8], addr: &MctpSockAddr) -> Result<usize> {
-        self.io_sendto(buf, addr).map_err(mctp::Error::Io)
+        self.sendmsg(&[buf], addr)
+    }
+
+    /// Blocking send to a socket, given a slice of buffers and address, returning
+    /// the number of bytes sent.
+    ///
+    /// Essentially a wrapper around [libc::sendmsg].
+    pub fn sendmsg(
+        &self,
+        bufs: &[&[u8]],
+        addr: &MctpSockAddr,
+    ) -> Result<usize> {
+        self.io_sendmsg(bufs, addr).map_err(mctp::Error::Io)
     }
 
     /// Bind the socket to a local address.
@@ -408,10 +399,7 @@ impl MctpSocketAsync {
         buf: &[u8],
         addr: &MctpSockAddr,
     ) -> Result<usize> {
-        self.0
-            .write_with(|io| io.io_sendto(buf, addr))
-            .await
-            .map_err(mctp::Error::Io)
+        self.sendmsg(&[buf], addr).await
     }
 
     /// Send a message to a given address, from a set of buffers.
