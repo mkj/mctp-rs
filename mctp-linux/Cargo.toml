@@ -8,7 +8,7 @@ repository.workspace = true
 categories = ["network-programming", "embedded", "hardware-support", "os::linux-apis"]
 
 [dependencies]
-libc = "0.2"
+rustix = { version = "1.1.4", features = ["net"] }
 mctp = { workspace = true, features = ["std"] }
 async-io = { workspace = true }
 

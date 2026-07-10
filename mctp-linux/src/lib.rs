@@ -9,7 +9,7 @@
 
 //! Interface for the Linux socket-based MCTP support.
 //!
-//! This crate provides some minimal wrappers around standard [`libc`] socket
+//! This crate provides some minimal wrappers around standard socket
 //! operations, using MCTP-specific addressing structures.
 //!
 //! [`MctpSocket`] provides support for blocking socket operations
@@ -42,20 +42,22 @@
 use async_io::Async;
 use core::mem;
 use std::fmt;
-use std::io::Error;
-use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, OwnedFd, RawFd};
+use std::io::{Error, ErrorKind, IoSlice};
+use std::os::unix::io::{AsFd, BorrowedFd, OwnedFd, RawFd};
 use std::time::Duration;
 
 use mctp::{
     Eid, MsgIC, MsgType, Result, Tag, TagValue, MCTP_ADDR_ANY, MCTP_TAG_OWNER,
 };
 
-/* until we have these in libc... */
-const AF_MCTP: libc::sa_family_t = 45;
+use rustix::net::AddressFamily;
+
+const AF_MCTP: AddressFamily = AddressFamily::from_raw(45);
 #[repr(C)]
 #[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Hash)]
 struct sockaddr_mctp {
-    smctp_family: libc::sa_family_t,
+    smctp_family: rustix::net::RawAddressFamily,
     __smctp_pad0: u16,
     smctp_network: u32,
     smctp_addr: u8,
@@ -75,7 +77,7 @@ impl MctpSockAddr {
     /// and tag value.
     pub fn new(eid: u8, net: u32, typ: u8, tag: u8) -> Self {
         MctpSockAddr(sockaddr_mctp {
-            smctp_family: AF_MCTP,
+            smctp_family: AF_MCTP.as_raw(),
             __smctp_pad0: 0,
             smctp_network: net,
             smctp_addr: eid,
@@ -84,23 +86,40 @@ impl MctpSockAddr {
             __smctp_pad1: 0,
         })
     }
+}
 
-    fn zero() -> Self {
-        Self::new(0, MCTP_NET_ANY, 0, 0)
-    }
-
-    fn as_raw(&self) -> (*const libc::sockaddr, libc::socklen_t) {
-        (
-            &self.0 as *const sockaddr_mctp as *const libc::sockaddr,
-            mem::size_of::<sockaddr_mctp>() as libc::socklen_t,
+unsafe impl rustix::net::addr::SocketAddrArg for MctpSockAddr {
+    unsafe fn with_sockaddr<R>(
+        &self,
+        f: impl FnOnce(
+            *const rustix::net::addr::SocketAddrOpaque,
+            rustix::net::addr::SocketAddrLen,
+        ) -> R,
+    ) -> R {
+        f(
+            &self.0 as *const sockaddr_mctp
+                as *const rustix::net::addr::SocketAddrOpaque,
+            mem::size_of::<sockaddr_mctp>() as _,
         )
     }
+}
 
-    fn as_raw_mut(&mut self) -> (*mut libc::sockaddr, libc::socklen_t) {
-        (
-            &mut self.0 as *mut sockaddr_mctp as *mut libc::sockaddr,
-            mem::size_of::<sockaddr_mctp>() as libc::socklen_t,
-        )
+impl TryFrom<rustix::net::SocketAddrAny> for MctpSockAddr {
+    type Error = ();
+    fn try_from(
+        sock: rustix::net::SocketAddrAny,
+    ) -> core::result::Result<Self, Self::Error> {
+        if sock.address_family() != AF_MCTP {
+            return Err(());
+        }
+
+        if sock.addr_len() as usize != mem::size_of::<sockaddr_mctp>() {
+            return Err(());
+        }
+
+        Ok(Self(
+            unsafe { &*(sock.as_ptr() as *const sockaddr_mctp) }.clone(),
+        ))
     }
 }
 
@@ -134,11 +153,6 @@ fn tag_to_smctp(tag: &Tag) -> u8 {
     tag.tag().0 | to_bit
 }
 
-// helper for IO error construction
-fn last_os_error() -> mctp::Error {
-    mctp::Error::Io(Error::last_os_error())
-}
-
 /// MCTP socket object.
 pub struct MctpSocket(OwnedFd);
 
@@ -146,19 +160,15 @@ impl MctpSocket {
     /// Create a new MCTP socket. This can then be used for send/receive
     /// operations.
     pub fn new() -> Result<Self> {
-        let rc = unsafe {
-            libc::socket(
-                AF_MCTP.into(),
-                libc::SOCK_DGRAM | libc::SOCK_CLOEXEC,
-                0,
-            )
-        };
-        if rc < 0 {
-            return Err(last_os_error());
+        match rustix::net::socket_with(
+            AF_MCTP,
+            rustix::net::SocketType::DGRAM,
+            rustix::net::SocketFlags::CLOEXEC,
+            None,
+        ) {
+            Ok(fd) => Ok(MctpSocket(fd)),
+            Err(e) => Err(mctp::Error::Io(e.into())),
         }
-        // safety: the fd is valid, and we have exclusive ownership
-        let fd = unsafe { OwnedFd::from_raw_fd(rc) };
-        Ok(MctpSocket(fd))
     }
 
     // Inner recvfrom, returning an io::Error on failure. This can be
@@ -168,34 +178,29 @@ impl MctpSocket {
         &self,
         buf: &mut [u8],
     ) -> std::io::Result<(usize, MctpSockAddr)> {
-        let mut addr = MctpSockAddr::zero();
-        let (addr_ptr, mut addr_len) = addr.as_raw_mut();
-        let buf_ptr = buf.as_mut_ptr() as *mut libc::c_void;
-        let buf_len = buf.len() as libc::size_t;
-        let fd = self.as_raw_fd();
-
-        let rc = unsafe {
-            libc::recvfrom(
-                fd,
-                buf_ptr,
-                buf_len,
-                libc::MSG_TRUNC,
-                addr_ptr,
-                &mut addr_len,
-            )
-        };
-
-        if rc < 0 {
-            Err(Error::last_os_error())
-        } else {
-            Ok((rc as usize, addr))
+        match rustix::net::recvfrom(
+            self.as_fd(),
+            buf,
+            rustix::net::RecvFlags::TRUNC,
+        ) {
+            Ok((_out, len, addr)) => {
+                // OK unwrap, recv returns an address
+                let addr = addr.unwrap();
+                // Shouldn't fail unless the kernel returns a bad address
+                let addr = addr
+                    .try_into()
+                    .map_err(|_| Error::from(ErrorKind::Other))?;
+                // OK unwrap, address.try_into().unwrap();
+                Ok((len, addr))
+            }
+            Err(e) => Err(e.into()),
         }
     }
 
     /// Blocking receive from a socket, into `buf`, returning a length
     /// and source address
     ///
-    /// Essentially a wrapper around [libc::recvfrom], using MCTP-specific
+    /// Essentially a wrapper around `recvfrom`, using MCTP-specific
     /// addressing.
     pub fn recvfrom(&self, buf: &mut [u8]) -> Result<(usize, MctpSockAddr)> {
         let (len, addr) = self.io_recvfrom(buf).map_err(mctp::Error::Io)?;
@@ -210,36 +215,21 @@ impl MctpSocket {
         bufs: &[&[u8]],
         addr: &MctpSockAddr,
     ) -> std::io::Result<usize> {
-        let mut iov: Vec<libc::iovec> = bufs
-            .iter()
-            .map(|b| libc::iovec {
-                iov_base: b.as_ptr() as *mut libc::c_void,
-                iov_len: b.len() as libc::size_t,
-            })
-            .collect();
+        let iov: Vec<IoSlice> = bufs.iter().map(|b| IoSlice::new(b)).collect();
 
-        let (addr_ptr, addr_len) = addr.as_raw();
-
-        let mut msg: libc::msghdr = unsafe { mem::zeroed() };
-        msg.msg_name = addr_ptr as *mut libc::c_void;
-        msg.msg_namelen = addr_len;
-        msg.msg_iov = iov.as_mut_ptr();
-        msg.msg_iovlen = iov.len() as _;
-
-        let fd = self.as_raw_fd();
-        let rc = unsafe { libc::sendmsg(fd, &msg, 0) };
-
-        if rc < 0 {
-            Err(Error::last_os_error())
-        } else {
-            Ok(rc as usize)
-        }
+        Ok(rustix::net::sendmsg_addr(
+            self.as_fd(),
+            addr,
+            &iov,
+            &mut rustix::net::SendAncillaryBuffer::default(),
+            rustix::net::SendFlags::empty(),
+        )?)
     }
 
     /// Blocking send to a socket, given a buffer and address, returning
     /// the number of bytes sent.
     ///
-    /// Essentially a wrapper around [libc::sendto].
+    /// Essentially a wrapper around `sendto`.
     pub fn sendto(&self, buf: &[u8], addr: &MctpSockAddr) -> Result<usize> {
         self.sendmsg(&[buf], addr)
     }
@@ -247,7 +237,7 @@ impl MctpSocket {
     /// Blocking send to a socket, given a slice of buffers and address, returning
     /// the number of bytes sent.
     ///
-    /// Essentially a wrapper around [libc::sendmsg].
+    /// Essentially a wrapper around `sendmsg`.
     pub fn sendmsg(
         &self,
         bufs: &[&[u8]],
@@ -258,89 +248,31 @@ impl MctpSocket {
 
     /// Bind the socket to a local address.
     pub fn bind(&self, addr: &MctpSockAddr) -> Result<()> {
-        let (addr_ptr, addr_len) = addr.as_raw();
-        let fd = self.as_raw_fd();
-
-        let rc = unsafe { libc::bind(fd, addr_ptr, addr_len) };
-
-        if rc < 0 {
-            Err(last_os_error())
-        } else {
-            Ok(())
-        }
+        rustix::net::bind(self.as_fd(), addr)
+            .map_err(|e| mctp::Error::Io(e.into()))
     }
 
     /// Set the read timeout.
     ///
     /// A valid of `None` will have no timeout.
     pub fn set_read_timeout(&self, dur: Option<Duration>) -> Result<()> {
-        // Avoid warnings about using time_t with musl. See comment in read_timeout().
-        #![allow(deprecated)]
-
-        let dur = dur.unwrap_or(Duration::ZERO);
-        let tv = libc::timeval {
-            tv_sec: dur.as_secs() as libc::time_t,
-            tv_usec: dur.subsec_micros() as libc::suseconds_t,
-        };
-        let fd = self.as_raw_fd();
-        let rc = unsafe {
-            libc::setsockopt(
-                fd,
-                libc::SOL_SOCKET,
-                libc::SO_RCVTIMEO,
-                (&tv as *const libc::timeval) as *const libc::c_void,
-                std::mem::size_of::<libc::timeval>() as libc::socklen_t,
-            )
-        };
-
-        if rc < 0 {
-            Err(last_os_error())
-        } else {
-            Ok(())
-        }
+        rustix::net::sockopt::set_socket_timeout(
+            self.as_fd(),
+            rustix::net::sockopt::Timeout::Recv,
+            dur,
+        )
+        .map_err(|e| mctp::Error::Io(e.into()))
     }
 
     /// Retrieves the read timeout
     ///
     /// A value of `None` indicates no timeout.
     pub fn read_timeout(&self) -> Result<Option<Duration>> {
-        // Avoid warnings about using time_t with musl. It is safe here since we are
-        // only using it directly with libc, that should be compiled with the
-        // same definitions as libc crate. https://github.com/rust-lang/libc/issues/1848
-        #![allow(deprecated)]
-
-        let mut tv = std::mem::MaybeUninit::<libc::timeval>::uninit();
-        let mut tv_len =
-            std::mem::size_of::<libc::timeval>() as libc::socklen_t;
-        let fd = self.as_raw_fd();
-        let rc = unsafe {
-            libc::getsockopt(
-                fd,
-                libc::SOL_SOCKET,
-                libc::SO_RCVTIMEO,
-                tv.as_mut_ptr() as *mut libc::c_void,
-                &mut tv_len as *mut libc::socklen_t,
-            )
-        };
-
-        if rc < 0 {
-            Err(last_os_error())
-        } else {
-            let tv = unsafe { tv.assume_init() };
-            if tv.tv_sec < 0 || tv.tv_usec < 0 {
-                // Negative timeout from socket
-                return Err(mctp::Error::Other);
-            }
-
-            if tv.tv_sec == 0 && tv.tv_usec == 0 {
-                Ok(None)
-            } else {
-                Ok(Some(
-                    Duration::from_secs(tv.tv_sec as u64)
-                        + Duration::from_micros(tv.tv_usec as u64),
-                ))
-            }
-        }
+        rustix::net::sockopt::socket_timeout(
+            self.as_fd(),
+            rustix::net::sockopt::Timeout::Recv,
+        )
+        .map_err(|e| mctp::Error::Io(e.into()))
     }
 }
 
