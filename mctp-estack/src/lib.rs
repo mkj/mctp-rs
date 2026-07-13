@@ -165,6 +165,7 @@ struct Flow {
 
 /// An opaque identifier that applications can use to associate responses.
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct AppCookie(pub usize);
 
 /// Low level MCTP stack.
