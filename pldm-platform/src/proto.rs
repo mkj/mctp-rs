@@ -232,15 +232,14 @@ where
     ) -> core::result::Result<Self, DekuError> {
         let Limit::Count(count) = limit else {
             return Err(DekuError::Assertion(
-                "Only count implemented for heapless::Vec".into(),
+                "Only count implemented for heapless::Vec",
             ));
         };
 
         let mut v = heapless::Vec::new();
         for _ in 0..count {
-            v.push(T::from_reader_with_ctx(reader, ctx)?).map_err(|_| {
-                DekuError::InvalidParam("Too many elements".into())
-            })?
+            v.push(T::from_reader_with_ctx(reader, ctx)?)
+                .map_err(|_| DekuError::InvalidParam("Too many elements"))?
         }
 
         Ok(VecWrap(v))
@@ -338,15 +337,14 @@ where
     ) -> core::result::Result<Self, DekuError> {
         let Limit::Count(count) = limit else {
             return Err(DekuError::Assertion(
-                "Only count implemented for heapless::Vec".into(),
+                "Only count implemented for heapless::Vec",
             ));
         };
 
         let mut v = heapless::Vec::new();
         for _ in 0..count {
-            v.push(u8::from_reader_with_ctx(reader, ())?).map_err(|_| {
-                DekuError::InvalidParam("Too many elements".into())
-            })?
+            v.push(u8::from_reader_with_ctx(reader, ())?)
+                .map_err(|_| DekuError::InvalidParam("Too many elements"))?
         }
 
         Ok(AsciiString(VecWrap(v)))
