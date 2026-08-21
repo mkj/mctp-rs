@@ -378,7 +378,7 @@ pub(crate) mod tests {
         let build_pre = |offsets: &[usize]| -> Vec<u8> {
             let mut pre = Vec::new();
             pre.extend_from_slice(&[0u8; 13]); // release date/time
-            pre.extend_from_slice(&(ncomp as u16).to_le_bytes()); // bitmap length (bits)
+            pre.extend_from_slice(&((bitmap_bytes * 8) as u16).to_le_bytes()); // bitmap length (bits)
 
             // package version string (type, length, data)
             pre.push(1u8);
