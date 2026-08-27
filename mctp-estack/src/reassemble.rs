@@ -93,11 +93,7 @@ impl Reassembler {
         };
 
         // Allow NULL EID for physical addressing
-        if !(header.dest == own_eid || header.dest == mctp::MCTP_ADDR_NULL) {
-            return false;
-        }
-
-        true
+        header.dest == own_eid || header.dest == mctp::MCTP_ADDR_NULL
     }
 
     /// Receive a packet, returning a message when complete.
