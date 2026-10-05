@@ -109,7 +109,7 @@ fn extract_component(
     idx: usize,
 ) -> anyhow::Result<()> {
     let Some(comp) = pkg.components.get(idx) else {
-        bail!("no component with index {}", idx)
+        bail!("no component with index {idx}")
     };
 
     let fname = format!("component-{}.{:04x}.bin", idx, comp.identifier);

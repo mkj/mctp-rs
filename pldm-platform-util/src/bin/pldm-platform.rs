@@ -136,7 +136,7 @@ fn enable_command_op(op_state: &str) -> Result<SetSensorOperationalState> {
     } else if op_state.starts_with("un") {
         SetSensorOperationalState::Unavailable
     } else {
-        bail!("Bad operational state '{}'", op_state);
+        bail!("Bad operational state '{op_state}'");
     })
 }
 
