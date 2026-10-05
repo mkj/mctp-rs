@@ -101,19 +101,14 @@ impl<'d, D: Driver<'d>> Sender<'d, D> {
                     continue 'sending;
                 }
 
-                'fill: loop {
-                    let Some((pkt, _dest)) = port.try_outbound() else {
-                        // No more packets
-                        break 'fill;
-                    };
+                while let Some((pkt, _dest)) = port.try_outbound()
+                    && self.feed(pkt).is_ok()
+                {
+                    // Feed failure means the packet won't fit so leave it
+                    // for next 'sending iteration.
 
-                    // See if it fits in the payload
-                    match self.feed(pkt) {
-                        // Success, consume it
-                        Ok(()) => port.outbound_done(),
-                        // Won't fit, leave it until next 'sending iteration.
-                        Err(_) => break 'fill,
-                    }
+                    // Success, consume it.
+                    port.outbound_done();
                 }
 
                 if let Err(e) = self.flush().await {
