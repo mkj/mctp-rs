@@ -3,10 +3,10 @@ name = "mctp-estack"
 description = "Embedded MCTP stack"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 categories = ["network-programming", "embedded", "hardware-support", "no-std"]
-rust-version = "1.85"
 
 [dependencies]
 crc = { workspace = true }

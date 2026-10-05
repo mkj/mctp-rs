@@ -80,3 +80,8 @@ There are also some MCTP over serial examples in [standalone/examples](standalon
 Contributing
 ------------
 If you wish to contribute, please see the [contribution guidelines](CONTRIBUTING.md).
+
+Minimum Rust Version
+--------------------
+
+Rust 1.88 is the minimum supported version. It may update as needed.

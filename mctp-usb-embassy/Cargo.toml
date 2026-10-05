@@ -3,10 +3,10 @@ name = "mctp-usb-embassy"
 description = "MCTP over USB transport for embassy-usb"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 categories = ["network-programming", "embedded", "no-std"]
-rust-version = "1.85"
 
 [dependencies]
 defmt = { workspace = true, optional = true }

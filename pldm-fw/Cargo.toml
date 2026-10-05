@@ -3,6 +3,7 @@ name = "pldm-fw"
 description = "Platform Level Data Model (PLDM) for Firmware Update library"
 version = "0.2.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 categories = ["network-programming", "embedded", "hardware-support"]

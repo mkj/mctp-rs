@@ -3,6 +3,7 @@ name = "pldm-platform"
 description = "Platform Level Data Model (PLDM) Platform Monitoring and Control"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 categories = ["network-programming", "embedded", "hardware-support"]
