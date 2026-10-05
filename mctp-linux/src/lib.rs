@@ -47,7 +47,7 @@ use std::os::unix::io::{AsFd, BorrowedFd, OwnedFd, RawFd};
 use std::time::Duration;
 
 use mctp::{
-    Eid, MsgIC, MsgType, Result, Tag, TagValue, MCTP_ADDR_ANY, MCTP_TAG_OWNER,
+    Eid, MCTP_ADDR_ANY, MCTP_TAG_OWNER, MsgIC, MsgType, Result, Tag, TagValue,
 };
 
 use rustix::net::AddressFamily;

@@ -175,9 +175,11 @@ mod tests {
         assert_eq!(n, 5);
         assert_eq!(&dest[..5], &[5, 6, 7, 8, 9]);
 
-        assert!(reader
-            .is_exhausted(vector)
-            .expect("Vector should be exhausted"));
+        assert!(
+            reader
+                .is_exhausted(vector)
+                .expect("Vector should be exhausted")
+        );
 
         // Test reading to end in one pass
         let mut reader = VectorReader::new();
@@ -188,8 +190,10 @@ mod tests {
         assert_eq!(n, 4);
         assert_eq!(&dest, &[1, 2, 3, 4]);
 
-        assert!(reader
-            .is_exhausted(vector)
-            .expect("Vector should be exhausted"));
+        assert!(
+            reader
+                .is_exhausted(vector)
+                .expect("Vector should be exhausted")
+        );
     }
 }

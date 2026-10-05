@@ -11,14 +11,14 @@ use crate::util::WakeOnDrop;
 
 use core::cell::RefCell;
 use core::debug_assert;
-use core::future::{poll_fn, Future};
+use core::future::{Future, poll_fn};
 use core::mem::take;
 use core::pin::pin;
 use core::task::{Poll, Waker};
 
 use crate::{
-    config, AppCookie, Fragmenter, MctpHeader, MctpMessage, SendOutput, Stack,
-    MAX_MTU,
+    AppCookie, Fragmenter, MAX_MTU, MctpHeader, MctpMessage, SendOutput, Stack,
+    config,
 };
 use mctp::{Eid, Error, MsgIC, MsgType, Result, Tag, TagValue};
 

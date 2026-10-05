@@ -5,13 +5,13 @@ use log::{debug, trace};
 use mctp::{AsyncRespChannel, Eid};
 use num_traits::FromPrimitive;
 use pldm::{
-    self, pldm_tx_resp_async, proto_error, CCode, PldmError, PldmRequest,
-    PldmResponse,
+    self, CCode, PldmError, PldmRequest, PldmResponse, pldm_tx_resp_async,
+    proto_error,
 };
 
+use crate::PLDM_TYPE_FILE_TRANSFER;
 use crate::proto::file_ccode;
 use crate::proto::*;
-use crate::PLDM_TYPE_FILE_TRANSFER;
 
 const FILE_ID: FileIdentifier = FileIdentifier(0);
 

@@ -20,15 +20,15 @@ use enumset::{EnumSet, EnumSetType};
 use num_derive::FromPrimitive;
 
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::{tag, take},
     character::complete::u32 as c_u32,
     combinator::{
         all_consuming, flat_map, map, map_opt, map_parser, map_res, rest, value,
     },
-    number::complete::{le_u16, le_u32, le_u8},
+    number::complete::{le_u8, le_u16, le_u32},
     sequence::tuple,
-    IResult,
 };
 
 #[cfg(feature = "alloc")]

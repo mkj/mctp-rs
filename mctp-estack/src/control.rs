@@ -6,9 +6,9 @@
 
 //! MCTP Control Protocol implementation
 
-use crate::fmt::*;
 #[cfg(feature = "async")]
 use crate::Router;
+use crate::fmt::*;
 #[cfg(feature = "async")]
 use mctp::{AsyncRespChannel, MsgIC};
 use mctp::{Eid, Error, Listener, MsgType};

@@ -13,11 +13,11 @@ use log::{debug, error};
 use thiserror::Error;
 
 use nom::{
+    IResult,
     combinator::{all_consuming, map},
     multi::length_value,
     number::complete::le_u32,
     sequence::tuple,
-    IResult,
 };
 
 use pldm::PldmError;
@@ -25,8 +25,8 @@ use pldm::PldmError;
 use crate::pkg;
 use crate::{
     DeviceIdentifiers, FirmwareParameters, FwCode, GetStatusResponse,
-    PldmFDState, RequestUpdateResponse, UpdateComponentResponse,
-    UpdateTransferProgress, PLDM_TYPE_FW,
+    PLDM_TYPE_FW, PldmFDState, RequestUpdateResponse, UpdateComponentResponse,
+    UpdateTransferProgress,
 };
 
 pub type Result<T> = core::result::Result<T, PldmUpdateError>;
@@ -266,12 +266,12 @@ pub fn pass_component_table(
                     return Err(PldmUpdateError::new_update(format!(
                         "unsupported component {}",
                         rsp.data[1]
-                    )))
+                    )));
                 }
                 x => {
                     return Err(PldmUpdateError::new_proto(format!(
                         "unknown PCT response {x:02x}"
-                    )))
+                    )));
                 }
             }
         }
@@ -468,7 +468,7 @@ where
         _ => {
             return Err(PldmUpdateError::new_update(
                 "unexpected command in verify state".into(),
-            ))
+            ));
         }
     }
     let mut fw_resp = fw_req.response();
@@ -589,12 +589,12 @@ fn check_fd_state(
 
 #[cfg(test)]
 mod tests {
-    use super::{request_update, Update};
+    use super::{Update, request_update};
     use crate::{
         Descriptor, DescriptorString, DeviceCapabilities, DeviceIdentifiers,
-        FirmwareParameters, GetStatusResponse, PldmFDState, PLDM_TYPE_FW,
+        FirmwareParameters, GetStatusResponse, PLDM_TYPE_FW, PldmFDState,
     };
-    use mctp::{Eid, MsgIC, MsgType, ReqChannel, MCTP_TYPE_PLDM};
+    use mctp::{Eid, MCTP_TYPE_PLDM, MsgIC, MsgType, ReqChannel};
     use std::collections::VecDeque;
 
     // --- Mock MCTP transport ---------------------------------------------

@@ -18,13 +18,13 @@ compile_error!("log and defmt features are mutually exclusive");
 use core::ops::Range;
 
 use embassy_futures::join::join;
-use embassy_usb::descriptor::{SynchronizationType, UsageType};
 use embassy_usb::Builder;
+use embassy_usb::descriptor::{SynchronizationType, UsageType};
 use embassy_usb_driver::{
     Driver, Endpoint, EndpointIn, EndpointOut, EndpointType,
 };
 use heapless::Vec;
-use mctp_estack::{router::Port, router::PortId, usb::MctpUsbHandler, Router};
+use mctp_estack::{Router, router::Port, router::PortId, usb::MctpUsbHandler};
 
 use crate::MCTP_USB_MAX_PACKET;
 

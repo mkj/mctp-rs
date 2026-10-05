@@ -19,8 +19,8 @@ use core::future::poll_fn;
 use futures::FutureExt;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll, Wake, Waker};
 

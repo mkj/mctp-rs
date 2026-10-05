@@ -2,12 +2,12 @@ use deku::{DekuContainerRead, DekuContainerWrite};
 use log::{trace, warn};
 use pldm::control::{MultipartReceiveReq, MultipartReceiveResp};
 use pldm::{
-    pldm_xfer_buf_async, proto_error, PldmError, PldmRequest, PldmResult,
-    Result,
+    PldmError, PldmRequest, PldmResult, Result, pldm_xfer_buf_async,
+    proto_error,
 };
 
-use crate::proto::*;
 use crate::PLDM_TYPE_FILE_TRANSFER;
+use crate::proto::*;
 
 pub async fn df_properties(
     comm: &mut impl mctp::AsyncReqChannel,

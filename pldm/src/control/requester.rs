@@ -14,8 +14,8 @@ use mctp::AsyncReqChannel;
 use deku::prelude::*;
 
 use crate::{
-    ccode_result, control, pldm_xfer_buf_async, proto_error, util::SliceWriter,
-    PldmError, PldmRequest, PldmResult,
+    PldmError, PldmRequest, PldmResult, ccode_result, control,
+    pldm_xfer_buf_async, proto_error, util::SliceWriter,
 };
 
 use super::xfer_flag;

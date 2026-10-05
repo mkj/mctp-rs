@@ -10,13 +10,13 @@ use core::time::Duration;
 use std::time::Instant;
 
 use embedded_io_async::{Read, Write};
-use smol::future::FutureExt;
 use smol::Timer;
+use smol::future::FutureExt;
 
 use mctp::{Eid, Error, MsgIC, MsgType, Result, Tag, TagValue};
 use mctp_estack::{
-    fragment::SendOutput, serial::MctpSerialHandler, AppCookie, MctpMessage,
-    Stack,
+    AppCookie, MctpMessage, Stack, fragment::SendOutput,
+    serial::MctpSerialHandler,
 };
 
 struct Inner<S: Read + Write> {

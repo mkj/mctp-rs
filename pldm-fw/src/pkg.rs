@@ -6,24 +6,24 @@
  */
 
 use nom::{
+    Finish, IResult,
     bytes::complete::take,
     combinator::{all_consuming, map, map_res},
     multi::{count, length_count},
-    number::complete::{le_u16, le_u32, le_u8},
+    number::complete::{le_u8, le_u16, le_u32},
     sequence::tuple,
-    Finish, IResult,
 };
 use std::io::{BufReader, Read};
 use std::os::unix::fs::FileExt;
 use thiserror::Error;
-use uuid::{uuid, Uuid};
+use uuid::{Uuid, uuid};
 
 const PKG_UUID_1_0_X: Uuid = uuid!("f018878c-cb7d-4943-9800-a02f059aca02");
 const PKG_UUID_1_1_X: Uuid = uuid!("1244d264-8d7d-4718-a030-fc8a56587d5a");
 
 use crate::{
-    parse_string, parse_string_adjacent, ComponentClassification, Descriptor,
-    DescriptorString, DeviceIdentifiers,
+    ComponentClassification, Descriptor, DescriptorString, DeviceIdentifiers,
+    parse_string, parse_string_adjacent,
 };
 
 type VResult<I, O> = IResult<I, O>;
@@ -239,7 +239,7 @@ impl Package {
             _ => {
                 return Err(PldmPackageError::new_format(&format!(
                     "unknown package UUID {identifier}"
-                )))
+                )));
             }
         };
 

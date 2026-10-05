@@ -126,7 +126,7 @@ struct BufferPtr<T>(*mut T);
 
 impl<T> BufferPtr<T> {
     unsafe fn add(&self, count: usize) -> *mut T {
-        self.0.add(count)
+        unsafe { self.0.add(count) }
     }
 }
 

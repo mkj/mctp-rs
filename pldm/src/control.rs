@@ -12,7 +12,7 @@
 
 use deku::{DekuRead, DekuWrite};
 
-use crate::{proto_error, PldmError, Result};
+use crate::{PldmError, Result, proto_error};
 
 pub mod requester;
 pub mod responder;

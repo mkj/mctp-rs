@@ -10,7 +10,7 @@ use crate::fmt::{debug, error, info, trace, warn};
 
 use mctp::{Eid, Error, MsgIC, MsgType, Result, Tag};
 
-use crate::{util::VectorReader, AppCookie, MctpHeader};
+use crate::{AppCookie, MctpHeader, util::VectorReader};
 
 /// Fragments a MCTP message.
 ///

@@ -14,19 +14,19 @@ use log::{debug, error, info, trace, warn};
 
 #[allow(unused)]
 use nom::{
+    IResult,
     combinator::{all_consuming, map},
     multi::length_value,
-    number::complete::{le_u16, le_u32, le_u8},
+    number::complete::{le_u8, le_u16, le_u32},
     sequence::tuple,
-    IResult,
 };
 
 use num_traits::FromPrimitive;
 
 use mctp::{Eid, ReqChannel, RespChannel};
 use pldm::{
-    pldm_tx_req, pldm_tx_resp, proto_error, CCode, PldmError, PldmRequest,
-    PldmResponse,
+    CCode, PldmError, PldmRequest, PldmResponse, pldm_tx_req, pldm_tx_resp,
+    proto_error,
 };
 
 use crate::*;
@@ -205,7 +205,7 @@ impl<R: RespChannel> Responder<R> {
                 self.cmd_pass_components(req, &mut comm, d)
             }
             Cmd::UpdateComponent => {
-                return self.cmd_update_component(req, comm, d)
+                return self.cmd_update_component(req, comm, d);
             }
             Cmd::ActivateFirmware => self.cmd_activate(req, &mut comm, d),
             Cmd::CancelUpdate => self.cmd_cancel_update(req, &mut comm, d),

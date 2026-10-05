@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use mctp::Eid;
 use mctp_linux::MctpLinuxAsyncReq;
-use pldm::{control::requester::negotiate_transfer_parameters, PldmError};
+use pldm::{PldmError, control::requester::negotiate_transfer_parameters};
 use pldm_file::{
     client::{df_close, df_open, df_properties, df_read_with},
     proto::{DfCloseAttributes, DfOpenAttributes, DfProperty, FileIdentifier},

@@ -9,7 +9,7 @@
 use crate::fmt::{debug, error, info, trace, warn};
 
 use crate::{
-    AppCookie, Fragmenter, MctpMessage, MsgIC, SendOutput, Stack, MAX_PAYLOAD,
+    AppCookie, Fragmenter, MAX_PAYLOAD, MctpMessage, MsgIC, SendOutput, Stack,
 };
 use mctp::{Eid, Error, MsgType, Result, Tag};
 
@@ -188,7 +188,7 @@ impl MctpI2cEncap {
             SendOutput::Packet(packet) => packet,
             // Just return on Complete or Error
             SendOutput::Complete { .. } | SendOutput::Error { .. } => {
-                return r.unborrowed().unwrap()
+                return r.unborrowed().unwrap();
             }
         };
 

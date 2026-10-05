@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use deku::DekuContainerRead;
 #[allow(unused_imports)]
 use log::{debug, info, trace, warn};

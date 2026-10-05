@@ -6,7 +6,7 @@
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use log::LevelFilter;
 
 use mctp::{Eid, MsgType, ReqChannel};

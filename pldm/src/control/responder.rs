@@ -15,10 +15,10 @@ use deku::{DekuContainerRead, DekuContainerWrite, DekuError};
 use heapless::Vec;
 use mctp::{AsyncRespChannel, Eid};
 
-use crate::control::{self, control_ccode, Cmd, PLDM_TYPE_CONTROL};
+use crate::control::{self, Cmd, PLDM_TYPE_CONTROL, control_ccode};
 use crate::{
-    pldm_tx_resp_async, proto_error, CCode, PldmError, PldmRequest,
-    PldmResponse, Result,
+    CCode, PldmError, PldmRequest, PldmResponse, Result, pldm_tx_resp_async,
+    proto_error,
 };
 
 /// Unassigned terminus ID

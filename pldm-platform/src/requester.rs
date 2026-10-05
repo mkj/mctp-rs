@@ -3,11 +3,11 @@ use log::{debug, error, info, trace, warn};
 
 use num_traits::FromPrimitive;
 
-use crate::proto::*;
 use crate::PLDM_TYPE_PLATFORM;
+use crate::proto::*;
 use pldm::{
-    control::xfer_flag, pldm_xfer_buf_async, proto_error, CCode, PldmError,
-    PldmRequest, Result,
+    CCode, PldmError, PldmRequest, Result, control::xfer_flag,
+    pldm_xfer_buf_async, proto_error,
 };
 
 use deku::{DekuContainerRead, DekuContainerWrite};

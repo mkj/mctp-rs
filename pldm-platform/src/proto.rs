@@ -9,14 +9,14 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use deku::{
-    ctx::Limit, deku_derive, writer::Writer, DekuEnumExt, DekuError, DekuRead,
-    DekuReader, DekuUpdate, DekuWrite, DekuWriter,
+    DekuEnumExt, DekuError, DekuRead, DekuReader, DekuUpdate, DekuWrite,
+    DekuWriter, ctx::Limit, deku_derive, writer::Writer,
 };
 
 use chrono::{DateTime, Datelike, FixedOffset, TimeDelta, TimeZone, Timelike};
 
 use pldm::control::xfer_flag;
-use pldm::{proto_error, PldmError, PldmResult};
+use pldm::{PldmError, PldmResult, proto_error};
 
 pub mod entity_type {
     pub const PHYSICAL: u16 = 0b00000000_00000000;

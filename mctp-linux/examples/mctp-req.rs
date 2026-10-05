@@ -5,7 +5,7 @@
  * Copyright (c) 2024 Code Construct
  */
 
-use mctp::{Eid, ReqChannel, MCTP_TYPE_CONTROL};
+use mctp::{Eid, MCTP_TYPE_CONTROL, ReqChannel};
 use mctp_linux::MctpLinuxReq;
 
 fn main() -> std::io::Result<()> {

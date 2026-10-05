@@ -53,7 +53,7 @@ pub use heapless::Vec;
 
 use heapless::{Entry, FnvIndexMap};
 
-use mctp::{Eid, Error, MsgIC, MsgType, Result, Tag, TagValue, MCTP_ADDR_NULL};
+use mctp::{Eid, Error, MCTP_ADDR_NULL, MsgIC, MsgType, Result, Tag, TagValue};
 
 #[cfg(not(any(feature = "log", feature = "defmt")))]
 compile_error!("Either log or defmt feature must be enabled");

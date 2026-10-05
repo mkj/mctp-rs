@@ -11,7 +11,7 @@
 
 #![allow(unused)]
 
-use crate::{AppCookie, MctpMessage, SendOutput, Stack, MAX_PAYLOAD};
+use crate::{AppCookie, MAX_PAYLOAD, MctpMessage, SendOutput, Stack};
 use heapless::Vec;
 use mctp::{Eid, Error, MsgIC, MsgType, Result, Tag};
 
@@ -124,7 +124,7 @@ impl MctpUsbHandler {
             let len = match r {
                 SendOutput::Packet(p) => p.len(),
                 SendOutput::Complete { .. } | SendOutput::Error { .. } => {
-                    return r.unborrowed().unwrap()
+                    return r.unborrowed().unwrap();
                 }
             };
 

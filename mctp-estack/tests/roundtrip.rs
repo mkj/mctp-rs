@@ -19,9 +19,9 @@ use mctp_estack::config::NUM_RECEIVE;
 use mctp_estack::router::{
     Port, PortId, PortLookup, PortTop, RouterAsyncReqChannel,
 };
-use mctp_estack::{config, Router};
+use mctp_estack::{Router, config};
 
-use futures::{select, FutureExt};
+use futures::{FutureExt, select};
 use std::collections::VecDeque;
 use std::future::Future;
 

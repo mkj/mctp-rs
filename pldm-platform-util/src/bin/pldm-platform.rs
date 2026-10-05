@@ -7,7 +7,7 @@
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use argh::FromArgs;
 use mctp_linux::MctpAddr;

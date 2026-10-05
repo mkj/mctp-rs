@@ -23,7 +23,7 @@ use alloc::{string::String, vec::Vec};
 use log::{debug, error, info, trace, warn};
 
 use core::fmt::{self, Debug};
-use deku::{no_std_io::ErrorKind, DekuError};
+use deku::{DekuError, no_std_io::ErrorKind};
 use num_derive::FromPrimitive;
 
 use mctp::MsgIC;

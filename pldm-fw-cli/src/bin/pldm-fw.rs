@@ -5,7 +5,7 @@
  * Copyright (c) 2023 Code Construct
  */
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use argh::FromArgs;
 use enumset::{EnumSet, EnumSetType};
 use mctp_linux::{MctpAddr, MctpLinuxListener};
