@@ -677,10 +677,10 @@ impl<'r> Router<'r> {
             };
 
             // Convert timeout to a deadline on the first iteration
-            if deadline.is_none() {
-                if let Some(timeout) = timeout {
-                    deadline = Some(timeout + inner.stack.now())
-                }
+            if deadline.is_none()
+                && let Some(timeout) = timeout
+            {
+                deadline = Some(timeout + inner.stack.now())
             }
 
             let expired =

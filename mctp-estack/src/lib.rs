@@ -259,11 +259,11 @@ impl Stack {
     pub fn update(&mut self, now_millis: u64) -> Result<(u64, bool)> {
         self.update_clock(now_millis)?;
 
-        if let Some(remain) = self.next_timeout.checked_sub(now_millis) {
-            if remain > 0 {
-                // Skip timeout checks if within previous interval
-                return Ok((remain, false));
-            }
+        if let Some(remain) = self.next_timeout.checked_sub(now_millis)
+            && remain > 0
+        {
+            // Skip timeout checks if within previous interval
+            return Ok((remain, false));
         }
 
         let mut timeout = TIMEOUT_INTERVAL;
