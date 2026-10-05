@@ -324,6 +324,14 @@ impl<const N: usize> TryFrom<&str> for AsciiString<N> {
     }
 }
 
+impl<const N: usize> core::str::FromStr for AsciiString<N> {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.try_into()
+    }
+}
+
 impl<Predicate, const N: usize> DekuReader<'_, (Limit<u8, Predicate>, ())>
     for AsciiString<N>
 where
